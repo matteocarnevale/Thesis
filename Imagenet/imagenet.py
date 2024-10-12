@@ -94,7 +94,7 @@ if __name__ == '__main__':
     class_json = "/media/HDD/carnevale/datasets/imaget1k/ImageNet_class_index.json"
     
     # Your Hugging Face token
-    token = "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"
+    token = 
     
     # List of tar.gz files to download and process
     tar_files = [
