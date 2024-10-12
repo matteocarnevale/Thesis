@@ -98,7 +98,12 @@ if __name__ == '__main__':
     
     # List of tar.gz files to download and process
     tar_files = [
-        "test_images.tar.gz"
+        "train_images_0.tar.gz",
+        "train_images_1.tar.gz",
+        "train_images_2.tar.gz",
+        "train_images_3.tar.gz",
+        "train_images_4.tar.gz",
+        "test_images.tar.gz",
     ]
     
     # Download, unpack, and organize the dataset
