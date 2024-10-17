@@ -5,9 +5,10 @@ from torchvision import transforms, datasets
 from PIL import Image
 import csv
 import os
+import torchvision.models as models
 
 # Importa il tuo modello Sequencer2D (assicurati di aver importato tutte le dipendenze)
-from sequencer.models.two_dim_sequencer import Sequencer2D
+#from sequencer.models.two_dim_sequencer import Sequencer2D
 
 # Carica GloVe Embeddings
 def load_glove_embeddings(file_path):
@@ -23,18 +24,21 @@ def load_glove_embeddings(file_path):
 # Carica il modello Sequencer2D e preparalo per l'estrazione delle feature
 def load_custom_feature_extractor(model_path):
     # Inizializza il tuo modello Sequencer2D
-    model = Sequencer2D(num_classes=1000)  # Specifica i parametri necessari per il tuo modello
+    #model = Sequencer2D(num_classes=1000)  # Specifica i parametri necessari per il tuo modello
+    model = models.mobilenet_v2(pretrained=True)
 
     # Carica i pesi addestrati
-    model.load_state_dict(torch.load(model_path))
+    #model.load_state_dict(torch.load(model_path))
     
     # Rimuovi l'ultimo layer per estrarre le feature
     # Qui si assume che `with_fc` indichi se è presente un fully connected layer finale
-    if model.with_fc:
-        model.with_fc = False
+    feature_extractor = torch.nn.Sequential(*list(model.children())[:-1])
 
-    model.eval()  # Imposta il modello in modalità di valutazione
-    return model
+    # Aggiungi il pooling globale per ridurre la dimensione delle feature
+    feature_extractor.add_module("global_avg_pool", torch.nn.AdaptiveAvgPool2d((1, 1)))
+
+    feature_extractor.eval()  # Imposta il modello in modalità di valutazione
+    return feature_extractor
 
 # Estrai feature da un'immagine
 def extract_image_features(feature_extractor, input_tensor):
@@ -68,10 +72,10 @@ def save_results_to_csv(log_file_path, results):
 # Main Script
 if __name__ == "__main__":
     # Percorso ai dati
-    glove_path = 'path/to/glove.6B.300d.txt'
+    glove_path = '/Users/matteo.carnevale/Python/glove/glove.6B/glove.6B.300d.txt'
     model_path = 'path/to/sequencer2d_pretrained.pth'
-    generic_image_folder = 'path/to/images'  # Cartella contenente immagini generiche
-    log_file_path = 'zero_shot_classification_log.csv'
+    generic_image_folder = '/Users/matteo.carnevale/Python/log'  # Cartella contenente immagini generiche
+    log_file_path = '/Users/matteo.carnevale/Python/log/zero_shot_classification_log.csv'
 
     # Carica GloVe embeddings e ottieni i vettori delle classi
     glove_embeddings = load_glove_embeddings(glove_path)
@@ -82,7 +86,7 @@ if __name__ == "__main__":
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
-    cifar100_dataset = datasets.CIFAR100(root='./data', train=False, download=True, transform=transform_cifar100)
+    cifar100_dataset = datasets.CIFAR100(root='/Users/matteo.carnevale/Python/data', train=False, download=True, transform=transform_cifar100)
 
     # Ottieni i nomi delle classi di CIFAR-100 e i loro embeddings
     unseen_classes_cifar100 = cifar100_dataset.classes
@@ -125,36 +129,36 @@ if __name__ == "__main__":
         # Stampa del risultato corrente per monitorare il progresso
         print(f"[CIFAR-100] Immagine {idx} -> Predetta: {predicted_class} (Somiglianza: {similarity_score:.4f})")
 
-    # Itera sulle immagini generiche e calcola le predizioni
-    for image_name in os.listdir(generic_image_folder):
-        image_path = os.path.join(generic_image_folder, image_name)
+    # # Itera sulle immagini generiche e calcola le predizioni
+    # for image_name in os.listdir(generic_image_folder):
+    #     image_path = os.path.join(generic_image_folder, image_name)
 
-        # Carica e trasforma l'immagine
-        transform_generic = transforms.Compose([
-            transforms.Resize((224, 224)),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-        ])
-        image = Image.open(image_path)
-        input_tensor = transform_generic(image).unsqueeze(0)
+    #     # Carica e trasforma l'immagine
+    #     transform_generic = transforms.Compose([
+    #         transforms.Resize((224, 224)),
+    #         transforms.ToTensor(),
+    #         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    #     ])
+    #     image = Image.open(image_path)
+    #     input_tensor = transform_generic(image).unsqueeze(0)
 
-        # Estrai feature dall'immagine
-        image_features = extract_image_features(feature_extractor, input_tensor)
+    #     # Estrai feature dall'immagine
+    #     image_features = extract_image_features(feature_extractor, input_tensor)
 
-        # Predici la classe
-        predicted_class, similarity_score = predict_class(image_features, class_vectors_cifar100, unseen_classes_cifar100)
+    #     # Predici la classe
+    #     predicted_class, similarity_score = predict_class(image_features, class_vectors_cifar100, unseen_classes_cifar100)
 
-        # Log del risultato
-        result = {
-            'image_path': image_path,
-            'dataset': 'Generic Images',
-            'predicted_class': predicted_class,
-            'similarity_score': similarity_score
-        }
-        results.append(result)
+    #     # Log del risultato
+    #     result = {
+    #         'image_path': image_path,
+    #         'dataset': 'Generic Images',
+    #         'predicted_class': predicted_class,
+    #         'similarity_score': similarity_score
+    #     }
+    #     results.append(result)
 
-        # Stampa del risultato corrente per monitorare il progresso
-        print(f"[Immagine Generica] {image_path} -> Predetta: {predicted_class} (Somiglianza: {similarity_score:.4f})")
+    #     # Stampa del risultato corrente per monitorare il progresso
+    #     print(f"[Immagine Generica] {image_path} -> Predetta: {predicted_class} (Somiglianza: {similarity_score:.4f})")
 
     # Salva tutti i risultati nel file CSV
     save_results_to_csv(log_file_path, results)

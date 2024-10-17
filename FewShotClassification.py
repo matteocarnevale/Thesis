@@ -6,6 +6,7 @@ from torchvision.datasets import ImageFolder
 import os
 from torch.utils.data import DataLoader, Subset
 import csv
+import torchvision.models as models
 
 # Importa il tuo modello Sequencer2D
 from sequencer.models.two_dim_sequencer import Sequencer2D
@@ -88,8 +89,9 @@ if __name__ == "__main__":
     model_path = 'path/to/sequencer2d_pretrained.pth'
 
     # Carica il modello Sequencer2D
-    model = Sequencer2D(num_classes=1000)  # Specifica i parametri per il modello
-    model.load_state_dict(torch.load(model_path))
+    #model = Sequencer2D(num_classes=1000)  # Specifica i parametri per il modello
+    #model.load_state_dict(torch.load(model_path))
+    model = models.mobilenet_v2(pretreined=True)
 
     # Congela il backbone del modello
     freeze_model_backbone(model)
@@ -101,7 +103,7 @@ if __name__ == "__main__":
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
-    cifar100_dataset = datasets.CIFAR100(root='./data', train=True, download=True, transform=transform_cifar100)
+    cifar100_dataset = datasets.CIFAR100(root='/Users/matteo.carnevale/Python/data', train=True, download=True, transform=transform_cifar100)
     few_shot_cifar100 = load_few_shot_dataset(cifar100_dataset, num_examples_per_class=5)
     few_shot_loader_cifar100 = DataLoader(few_shot_cifar100, batch_size=8, shuffle=True, num_workers=4)
 
@@ -126,7 +128,7 @@ if __name__ == "__main__":
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
-    cars_dataset = datasets.StanfordCars(root='./data', split='train', download=True, transform=transform_cars)
+    cars_dataset = datasets.StanfordCars(root='/Users/matteo.carnevale/Python/data', split='train', download=True, transform=transform_cars)
     few_shot_cars = load_few_shot_dataset(cars_dataset, num_examples_per_class=5)
     few_shot_loader_cars = DataLoader(few_shot_cars, batch_size=8, shuffle=True, num_workers=4)
 
