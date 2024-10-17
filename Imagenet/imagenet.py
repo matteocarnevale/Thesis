@@ -4,11 +4,6 @@ import shutil
 import tarfile
 import json
 
-import os
-import requests
-import shutil
-import tarfile
-
 def download_file(url, target_path, token):
     headers = {
         "Authorization": f"Bearer {token}"
@@ -23,7 +18,6 @@ def download_file(url, target_path, token):
                     f.write(chunk)
 
     print(f"Downloaded {target_path}")
-
 
 def unpack_and_organize(tar_file, target_train_dir, class_json):
     # Load class-to-num mapping from JSON
@@ -59,7 +53,6 @@ def unpack_and_organize(tar_file, target_train_dir, class_json):
     
     print(f"Organized data in {target_train_dir}")
 
-
 def download_and_process_dataset(base_url, target_dir, class_json, token, tar_files):
     target_train_dir = os.path.join(target_dir, 'test')
 
@@ -82,7 +75,6 @@ def download_and_process_dataset(base_url, target_dir, class_json, token, tar_fi
         os.remove(local_tar_file)
         print(f"Removed {local_tar_file} to free space")
 
-
 if __name__ == '__main__':
     # Base URL where your files are hosted (on Hugging Face or another source)
     base_url = "https://huggingface.co/datasets/ILSVRC/imagenet-1k/resolve/main/data"
@@ -93,8 +85,8 @@ if __name__ == '__main__':
     # Path to the JSON file mapping class numbers to class names
     class_json = "/media/HDD/carnevale/datasets/imaget1k/ImageNet_class_index.json"
     
-    # Your Hugging Face token
-    token = 
+    # Ask for the Hugging Face token as input
+    token = input("Please enter your Hugging Face token: ")
     
     # List of tar.gz files to download and process
     tar_files = [
