@@ -3,21 +3,54 @@ import requests
 import shutil
 import tarfile
 import json
+from tqdm import tqdm  # For progress bars
+import concurrent.futures  # For parallelism
 
 def download_file(url, target_path, token):
     headers = {
         "Authorization": f"Bearer {token}"
     }
     
-    # Download the file
+    # Stream the download with progress bar
     with requests.get(url, headers=headers, stream=True) as r:
-        r.raise_for_status()
-        with open(target_path, 'wb') as f:
-            for chunk in r.iter_content(chunk_size=8192):
+        total_size = int(r.headers.get('content-length', 0))
+        chunk_size = 1024 * 1024  # 1MB chunks
+        with open(target_path, 'wb') as f, tqdm(
+            desc=target_path, total=total_size, unit='B', unit_scale=True, unit_divisor=1024
+        ) as bar:
+            for chunk in r.iter_content(chunk_size=chunk_size):
                 if chunk:
                     f.write(chunk)
+                    bar.update(len(chunk))
 
     print(f"Downloaded {target_path}")
+
+def extract_with_progress(tar_file, target_train_dir):
+    # Extract with progress bar
+    with tarfile.open(tar_file, 'r:gz') as tar:
+        total_members = len(tar.getmembers())
+        with tqdm(total=total_members, desc=f"Extracting {tar_file}", unit="file") as pbar:
+            tar.extractall(path=target_train_dir)
+            for member in tar.getmembers():
+                pbar.update(1)
+
+def organize_files(class_zip_path, target_train_dir, num2class):
+    # Organize files into their respective class folders
+    class_zip = os.path.basename(class_zip_path)
+    if class_zip.endswith(".tar") or class_zip.endswith(".tar.gz"):
+        class_, _ = class_zip.split('.')
+        class_dir = os.path.join(target_train_dir, num2class.get(class_, class_))  # Create class directory
+        if not os.path.exists(class_dir):
+            os.makedirs(class_dir)
+        
+        shutil.unpack_archive(class_zip_path, class_dir)  # Extract the archive to the class directory
+        os.remove(class_zip_path)  # Remove the archive after extraction
+    elif class_zip.endswith(".JPEG"):
+        class_, _ = class_zip.split('_', 1)  # Split on first underscore to get class name
+        class_dir = os.path.join(target_train_dir, class_)
+        if not os.path.exists(class_dir):
+            os.makedirs(class_dir)
+        shutil.move(class_zip_path, class_dir)  # Move the image to the class directory
 
 def unpack_and_organize(tar_file, target_train_dir, class_json):
     # Load class-to-num mapping from JSON
@@ -27,34 +60,20 @@ def unpack_and_organize(tar_file, target_train_dir, class_json):
         for num in json_data:
             num2class[num] = json_data[num][0]  # Map num to class name
 
-    # Unpack the tar.gz file and organize it by class names
-    with tarfile.open(tar_file, 'r:gz') as tar:
-        tar.extractall(target_train_dir)
-    
-    # Organize files into their respective class folders
-    for class_zip in sorted(os.listdir(target_train_dir)):
-        class_zip_path = os.path.join(target_train_dir, class_zip)
-        
-        # Check if the file is an archive or image
-        if class_zip.endswith(".tar") or class_zip.endswith(".tar.gz"):
-            class_, _ = class_zip.split('.')
-            class_dir = os.path.join(target_train_dir, num2class.get(class_, class_))  # Create class directory
-            if not os.path.exists(class_dir):
-                os.makedirs(class_dir)
-            
-            shutil.unpack_archive(class_zip_path, class_dir)  # Extract the archive to the class directory
-            os.remove(class_zip_path)  # Remove the archive after extraction
-        elif class_zip.endswith(".JPEG"):
-            class_, _ = class_zip.split('_', 1)  # Split on first underscore to get class name
-            class_dir = os.path.join(target_train_dir, class_)
-            if not os.path.exists(class_dir):
-                os.makedirs(class_dir)
-            shutil.move(class_zip_path, class_dir)  # Move the image to the class directory
-    
+    # Step 1: Extract tar.gz file
+    extract_with_progress(tar_file, target_train_dir)
+
+    # Step 2: Organize files in parallel using multi-threading
+    class_zip_paths = [os.path.join(target_train_dir, file) for file in os.listdir(target_train_dir)]
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = [executor.submit(organize_files, class_zip_path, target_train_dir, num2class) for class_zip_path in class_zip_paths]
+        for future in concurrent.futures.as_completed(futures):
+            future.result()  # Ensure all tasks are completed
+
     print(f"Organized data in {target_train_dir}")
 
 def download_and_process_dataset(base_url, target_dir, class_json, token, tar_files):
-    target_train_dir = os.path.join(target_dir, 'test')
+    target_train_dir = os.path.join(target_dir, 'train')
 
     # Process each tar.gz file one by one
     for tar_file in tar_files:
@@ -95,7 +114,6 @@ if __name__ == '__main__':
         "train_images_2.tar.gz",
         "train_images_3.tar.gz",
         "train_images_4.tar.gz",
-        "test_images.tar.gz",
     ]
     
     # Download, unpack, and organize the dataset
