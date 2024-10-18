@@ -48,13 +48,17 @@ def reorganize_val_images(val_dir):
         # Extract the class name from the filename (e.g., ILSVRC2012_val_00000001_n01751748.JPEG)
         class_name = img_file.split('_')[-1].split('.')[0]
 
-        # Create the class folder inside the val directory
+        # Create the class folder inside the val directory if it doesn't exist
         class_dir = os.path.join(val_dir, class_name)
         if not os.path.exists(class_dir):
             os.makedirs(class_dir)
 
-        # Move the image into the class folder
-        shutil.move(img_file_path, os.path.join(class_dir, img_file))
+        # Create the new image name by removing the class label from the filename
+        new_image_name = "_".join(img_file.split('_')[:-1]) + ".JPEG"
+
+        # Move the image into the class folder with the new name
+        new_image_path = os.path.join(class_dir, new_image_name)
+        shutil.move(img_file_path, new_image_path)
 
     print(f"Reorganization complete for {val_dir}")
 
@@ -82,7 +86,7 @@ def download_and_process_val_dataset(base_url, target_dir, token):
     os.remove(val_tar_file)
     print(f"Removed {val_tar_file} to free space")
 
-    # Reorganize validation images into class folders
+    # Reorganize validation images into class folders and rename them
     reorganize_val_images(target_val_dir)
 
 
