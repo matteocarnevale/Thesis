@@ -108,7 +108,7 @@ def download_and_process_dataset(base_url, target_dir, class_json, token, tar_fi
 if __name__ == '__main__':
     base_url = "https://huggingface.co/datasets/ILSVRC/imagenet-1k/resolve/main/data"
     target_dir = "/home/ubuntu/datasets/imagenet"
-    class_json = "/home/ubuntu/CVPR/Thesis/Imagenet/ImageNet_class_index.json"
+    class_json = "/home/ubuntu/Thesis/Imagenet/ImageNet_class_index.json"
     token = input("Please enter your Hugging Face token: ")
 
     tar_files = [
